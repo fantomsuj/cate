@@ -148,6 +148,20 @@ export async function runAction(
       }
       break
     }
+    case 'renamePanel': {
+      // Broadcast rather than call directly: the inline-rename input is owned
+      // per-dock-stack by useDockTabActions, so whichever DockTabStack holds
+      // this panelId picks the event up (see DockTabStack.tsx). Mirrors the
+      // save-file broadcast pattern in EditorPanel.tsx.
+      const canvas = canvasStore()
+      const focusedNodeId = canvas ? focusedNodeIdOf(canvas) : null
+      if (focusedNodeId) {
+        const node = canvas?.nodes[focusedNodeId]
+        const panelId = activeDockPanelId(node?.dockLayout)
+        if (panelId) window.dispatchEvent(new CustomEvent('rename-panel', { detail: { panelId } }))
+      }
+      break
+    }
     case 'toggleSidebar':
       useUIStore.getState().toggleSidebar()
       break

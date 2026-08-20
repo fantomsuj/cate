@@ -119,6 +119,20 @@ export default function DockTabStack({ stack, zone: zoneProp, renderPanel, getPa
     localOnly,
   })
 
+  // Cmd+R (renamePanel) broadcasts a window-wide `rename-panel` event carrying
+  // the focused panelId (see runAction.ts) — react only when that panel lives
+  // in this stack, since every dock stack/mini-dock mounts this same listener.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const panelId = (e as CustomEvent<{ panelId: string }>).detail?.panelId
+      if (!panelId || !stack.panelIds.includes(panelId)) return
+      const panel = resolvePanel(panelId)
+      if (panel) actions.beginRename(panelId, panel.title)
+    }
+    window.addEventListener('rename-panel', handler)
+    return () => window.removeEventListener('rename-panel', handler)
+  }, [stack.panelIds, resolvePanel, actions])
+
   // Main-dock tab drag (canvas-node mini-docks route through onTabBarMouseDown).
   const { handleTabMouseDown } = useDockTabDrag({
     stackId: stack.id,

@@ -283,8 +283,9 @@ export function useShortcuts(windowCanvasStore?: StoreApi<CanvasStore>): void {
       }
 
       // Keyboard-only passthrough: when a browser panel is focused, let
-      // Cmd+=/- zoom the webview content instead of the canvas.
-      if (action === 'zoomIn' || action === 'zoomOut' || action === 'zoomReset') {
+      // Cmd+=/- zoom the webview content instead of the canvas, and let
+      // Cmd+R reach the browser's own reload handler instead of renamePanel.
+      if (action === 'zoomIn' || action === 'zoomOut' || action === 'zoomReset' || action === 'renamePanel') {
         const state = canvasStore()
         const focusedId = state ? focusedNodeIdOf(state) : null
         const focusedNode = focusedId && state ? state.nodes[focusedId] : null

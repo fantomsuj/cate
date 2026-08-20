@@ -659,6 +659,12 @@ export const SHORTCUT_DEFINITIONS = {
   newCanvas: { label: 'New Canvas', shortcut: storedShortcut('c', { command: true, shift: true }) },
   newFile: { label: 'New File', shortcut: storedShortcut('n', { command: true }) },
   closePanel: { label: 'Close Panel', shortcut: storedShortcut('w', { command: true }) },
+  // Cmd+R is also the browser panel's local reload gesture (BrowserPanel.tsx),
+  // so useShortcuts.ts stands down when a browser panel is focused — mirrors
+  // the zoomIn/zoomOut/zoomReset guard just below it. Keep this item out of
+  // the native menu's `accelerator` (see menu.ts) so Electron doesn't swallow
+  // the key globally before that guard ever runs.
+  renamePanel: { label: 'Rename Panel', shortcut: storedShortcut('r', { command: true }) },
   toggleSidebar: { label: 'Toggle Sidebar', shortcut: storedShortcut('b', { command: true }) },
   toggleFileExplorer: { label: 'Toggle File Explorer', shortcut: storedShortcut('x', { command: true, shift: true }) },
   toggleSearch: { label: 'Toggle Search', shortcut: storedShortcut('f', { command: true, shift: true }) },

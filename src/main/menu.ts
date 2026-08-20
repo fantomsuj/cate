@@ -166,6 +166,11 @@ export function buildApplicationMenu(): void {
         { ...actionMeta('saveFile'), label: 'Save', click: dispatch('saveFile') },
         { type: 'separator' },
         { ...actionMeta('closePanel'), click: dispatch('closePanel') },
+        // No `accelerator` here, same as the browser Reload items below —
+        // Cmd+R is also the browser panel's local reload gesture, and a native
+        // accelerator would swallow the key before useShortcuts' browser-focus
+        // guard (renderer-side) ever gets a chance to stand down.
+        { label: `${SHORTCUT_DISPLAY_NAMES.renamePanel} (⌘R)`, click: dispatch('renamePanel') },
         { role: 'close', label: 'Close Window', accelerator: 'CmdOrCtrl+Shift+W' },
       ],
     },
