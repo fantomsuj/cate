@@ -132,16 +132,25 @@ export function sanitizeLoadedCanvasNodes(
       creationIndex: repair(isFiniteNumber(v.creationIndex), v.creationIndex as number, nextC++),
     }
 
-    // A maximized node carries pre-maximize geometry that resize/restore code
-    // reads; if it's malformed, drop it back to a normal (un-maximized) node
-    // rather than risk a second crash.
-    if (node.preMaximizeOrigin != null && !isValidPoint(node.preMaximizeOrigin)) {
+    // Overlay fullscreen replaced in-canvas maximize. Restore any persisted
+    // pre-maximize geometry so a saved "covering" node snaps back to its
+    // real size instead of sitting on top of its neighbors.
+    if (isValidPoint(node.preMaximizeOrigin) && isValidSize(node.preMaximizeSize)) {
+      node.origin = { ...node.preMaximizeOrigin }
+      node.size = { ...node.preMaximizeSize }
       delete node.preMaximizeOrigin
-      touched = true
-    }
-    if (node.preMaximizeSize != null && !isValidSize(node.preMaximizeSize)) {
       delete node.preMaximizeSize
       touched = true
+    } else {
+      // Malformed leftovers: drop them rather than risk a second crash.
+      if (node.preMaximizeOrigin != null && !isValidPoint(node.preMaximizeOrigin)) {
+        delete node.preMaximizeOrigin
+        touched = true
+      }
+      if (node.preMaximizeSize != null && !isValidSize(node.preMaximizeSize)) {
+        delete node.preMaximizeSize
+        touched = true
+      }
     }
 
     nodes[key] = node

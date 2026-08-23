@@ -185,6 +185,7 @@ export const CommandPalette: React.FC = () => {
       { id: 'zoomReset', title: shortcutTitle('zoomReset'), icon: <ZoomResetIcon />, action: run('zoomReset') },
       { id: 'zoomToFit', title: shortcutTitle('zoomToFit'), icon: <ZoomToFitIcon />, action: run('zoomToFit') },
       { id: 'zoomToSelection', title: shortcutTitle('zoomToSelection'), icon: <ZoomSelectionIcon />, action: run('zoomToSelection') },
+      { id: 'togglePanelFullscreen', title: shortcutTitle('togglePanelFullscreen'), icon: <ZoomToFitIcon />, action: run('togglePanelFullscreen') },
       { id: 'autoLayout', title: shortcutTitle('autoLayout'), icon: <LayersIcon />, action: run('autoLayout') },
       { id: 'undo', title: shortcutTitle('undo'), icon: <UndoIcon />, action: run('undo') },
       { id: 'redo', title: shortcutTitle('redo'), icon: <RedoIcon />, action: run('redo') },

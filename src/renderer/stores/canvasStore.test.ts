@@ -111,6 +111,24 @@ describe('canvasStore.selectVisibleNodeIds — keep-mounted webview nodes', () =
     expect(visible).not.toContain(editorId)
   })
 
+  it('keeps an off-screen switcher highlight mounted', () => {
+    const store = createCanvasStore()
+    const id = store.getState().addNode('p-sw', 'editor', { x: 5000, y: 5000 }, { width: 100, height: 80 })
+    offscreen(store)
+    store.setState({ panelSwitcher: { highlightId: id, prevOffset: { x: 0, y: 0 } } })
+
+    expect(selectVisibleNodeIds(store.getState())).toContain(id)
+  })
+
+  it('keeps an off-screen overlay-fullscreen node mounted', () => {
+    const store = createCanvasStore()
+    const id = store.getState().addNode('p-fs', 'editor', { x: 5000, y: 5000 }, { width: 100, height: 80 })
+    offscreen(store)
+    store.setState({ fullscreenNodeId: id })
+
+    expect(selectVisibleNodeIds(store.getState())).toContain(id)
+  })
+
   it('without a keep-mounted set, the extension is culled like any other node', () => {
     const store = createCanvasStore()
     const extId = store.getState().addNode('p-ext', 'extension', { x: 5000, y: 6000 }, { width: 100, height: 80 })

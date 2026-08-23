@@ -199,6 +199,7 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onNewAgent,
 }) => {
   const canvasApi = useCanvasStoreApi()
+  const fullscreenNodeId = useCanvasStoreContext((s) => s.fullscreenNodeId)
   const zoom = useCanvasStoreContext((s) => s.zoomLevel)
   const minimapOpen = useUIStore((s) => s.minimapOpen)
   const toggleMinimapOpen = useUIStore((s) => s.toggleMinimapOpen)
@@ -349,6 +350,8 @@ const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
     }
     toggleMinimapOpen()
   }
+
+  if (fullscreenNodeId) return null
 
   return (
     <>

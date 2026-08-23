@@ -4,7 +4,8 @@
 // =============================================================================
 
 import { useEffect } from 'react'
-import { matchShortcutEvent } from '../stores/shortcutStore'
+import { getResolvedShortcuts, matchShortcutEvent } from '../stores/shortcutStore'
+import { panelSwitcherHoldKey } from '../lib/canvas/panelSwitcher'
 import type { StoreApi } from 'zustand'
 import type { CanvasStore } from '../stores/canvasStore'
 import {
@@ -166,13 +167,27 @@ export function useShortcuts(windowCanvasStore?: StoreApi<CanvasStore>): void {
         return
       }
 
-      // Escape — clear selection and revert to the Select tool (when no overlay
-      // is open) so the user is never stuck in the Hand tool.
+      // Escape — switcher first, then overlay fullscreen, then the existing
+      // "clear selection / back to Select" path. Switcher/fullscreen win even
+      // over a focused terminal so Cmd+F focus mode is always dismissible.
       if (e.key === 'Escape') {
+        const canvas = canvasStore()
+        if (canvas?.panelSwitcher) {
+          e.preventDefault()
+          e.stopPropagation()
+          canvas.cancelPanelSwitcher()
+          return
+        }
+        if (canvas?.fullscreenNodeId) {
+          e.preventDefault()
+          e.stopPropagation()
+          canvas.exitFullscreen()
+          return
+        }
         if (terminalHasFocus) return
         const ui = useUIStore.getState()
         if (!ui.showCommandPalette) {
-          canvasStore()?.clearSelection()
+          canvas?.clearSelection()
           if (ui.activeTool !== 'select') ui.setActiveTool('select')
           // Don't prevent default — Escape might also close other things
           return
@@ -282,6 +297,28 @@ export function useShortcuts(windowCanvasStore?: StoreApi<CanvasStore>): void {
         if (isSidebarKeyNavFocused()) return
       }
 
+      // Cmd+F is Find inside a real text editor. Terminals and idle canvas
+      // chrome use it for overlay fullscreen (the requested focus gesture).
+      if (action === 'togglePanelFullscreen') {
+        if (!terminalHasFocus && isTextSurfaceFocused()) return
+      }
+
+      // Ctrl+Tab holds a visual switcher; releasing the modifier commits.
+      // The menu "Next Panel" path still jumps immediately via runAction.
+      if (action === 'focusNext' || action === 'focusPrevious') {
+        if (ui.showCommandPalette) return
+        const hold = panelSwitcherHoldKey(getResolvedShortcuts()[action])
+        if (hold) {
+          e.preventDefault()
+          e.stopPropagation()
+          const canvas = canvasStore()
+          const direction = action === 'focusNext' ? 'next' : 'previous'
+          if (canvas?.panelSwitcher) canvas.cyclePanelSwitcher(direction)
+          else canvas?.openPanelSwitcher(direction)
+          return
+        }
+      }
+
       // Keyboard-only passthrough: when a browser panel is focused, let
       // Cmd+=/- zoom the webview content instead of the canvas.
       if (action === 'zoomIn' || action === 'zoomOut' || action === 'zoomReset') {
@@ -336,10 +373,25 @@ export function useShortcuts(windowCanvasStore?: StoreApi<CanvasStore>): void {
       return !!active?.closest('[data-sidebar-keynav]')
     }
 
+    function handleKeyUp(e: KeyboardEvent) {
+      const canvas = canvasStore()
+      if (!canvas?.panelSwitcher) return
+      const hold = panelSwitcherHoldKey(getResolvedShortcuts().focusNext)
+      if (hold && e.key === hold) canvas.commitPanelSwitcher()
+    }
+
+    function handleWindowBlur() {
+      canvasStore()?.commitPanelSwitcher()
+    }
+
     document.addEventListener('keydown', handleKeyDown, { capture: true })
+    document.addEventListener('keyup', handleKeyUp, { capture: true })
+    window.addEventListener('blur', handleWindowBlur)
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown, { capture: true })
+      document.removeEventListener('keyup', handleKeyUp, { capture: true })
+      window.removeEventListener('blur', handleWindowBlur)
       unsubscribeMenu()
       unsubscribeLoadLayout()
     }

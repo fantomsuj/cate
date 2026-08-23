@@ -79,6 +79,23 @@ describe('sanitizeLoadedCanvasNodes', () => {
     expect(nodes.n1.preMaximizeOrigin).toEqual({ x: 1, y: 2 })
   })
 
+  it('restores a persisted maximized node to its pre-maximize geometry', () => {
+    const { nodes, repaired } = sanitizeLoadedCanvasNodes({
+      n1: {
+        ...valid,
+        origin: { x: 20, y: 20 },
+        size: { width: 1160, height: 760 },
+        preMaximizeOrigin: { x: 80, y: 90 },
+        preMaximizeSize: { width: 320, height: 240 },
+      },
+    })
+    expect(repaired).toEqual(['n1'])
+    expect(nodes.n1.origin).toEqual({ x: 80, y: 90 })
+    expect(nodes.n1.size).toEqual({ width: 320, height: 240 })
+    expect(nodes.n1.preMaximizeOrigin).toBeUndefined()
+    expect(nodes.n1.preMaximizeSize).toBeUndefined()
+  })
+
   it('falls back to the map key when a node has no id', () => {
     const { nodes } = sanitizeLoadedCanvasNodes({ key1: { ...valid, id: undefined } })
     expect(nodes.key1.id).toBe('key1')

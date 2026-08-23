@@ -195,15 +195,24 @@ export async function runAction(
     case 'focusNext': {
       const canvas = canvasStore()
       const next = canvas?.nextNode()
-      if (next) canvas?.focusNode(next)
+      if (next) {
+        if (canvas?.fullscreenNodeId) canvas.enterFullscreen(next)
+        else canvas?.focusAndCenter(next)
+      }
       break
     }
     case 'focusPrevious': {
       const canvas = canvasStore()
       const prev = canvas?.previousNode()
-      if (prev) canvas?.focusNode(prev)
+      if (prev) {
+        if (canvas?.fullscreenNodeId) canvas.enterFullscreen(prev)
+        else canvas?.focusAndCenter(prev)
+      }
       break
     }
+    case 'togglePanelFullscreen':
+      canvasStore()?.toggleFullscreen()
+      break
     case 'saveFile':
       window.dispatchEvent(new CustomEvent('save-file'))
       break

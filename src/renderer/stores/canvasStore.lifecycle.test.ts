@@ -577,6 +577,8 @@ describe('loadWorkspaceCanvas session round-trip', () => {
     expect(focusedNodeId(s)).toBeNull()
     expect(s.selection.length).toBe(0)
     expect(s.history).toHaveLength(0)
+    expect(s.fullscreenNodeId).toBeNull()
+    expect(s.panelSwitcher).toBeNull()
     expect(Object.values(s.nodes).every((n) => n.animationState === 'idle')).toBe(true)
     // Counters resume past the loaded maxima — new nodes stack on top.
     const d = restored.getState().addNode('panel-d', 'terminal', { x: 4000, y: 0 }, SIZE)

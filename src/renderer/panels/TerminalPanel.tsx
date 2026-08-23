@@ -243,7 +243,8 @@ export default function TerminalPanel({
   useClaimPanelCorner(showSearch)
 
   // -------------------------------------------------------------------------
-  // Keyboard shortcut: Cmd+F / Ctrl+F opens search; Escape closes it
+  // Keyboard shortcut: Cmd+F / Ctrl+F opens search when the global
+  // full-screen shortcut is remapped or this panel is isolated. Escape closes it.
   // -------------------------------------------------------------------------
 
   const showSearchRef = useRef(showSearch)

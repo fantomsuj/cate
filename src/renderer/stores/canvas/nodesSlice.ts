@@ -115,6 +115,8 @@ export function createNodesSlice(set: CanvasSet, get: CanvasGet): NodesActions {
           },
           selection: state.selection.filter((x) => x !== id),
           selectionActive: wasActiveLead ? false : state.selectionActive,
+          fullscreenNodeId: state.fullscreenNodeId === id ? null : state.fullscreenNodeId,
+          panelSwitcher: state.panelSwitcher?.highlightId === id ? null : state.panelSwitcher,
         }
       })
     },
@@ -127,6 +129,8 @@ export function createNodesSlice(set: CanvasSet, get: CanvasGet): NodesActions {
         selection: state.selection.includes(nodeId)
           ? state.selection.filter((x) => x !== nodeId)
           : state.selection,
+        fullscreenNodeId: state.fullscreenNodeId === nodeId ? null : state.fullscreenNodeId,
+        panelSwitcher: state.panelSwitcher?.highlightId === nodeId ? null : state.panelSwitcher,
       }))
     },
 

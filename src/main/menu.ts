@@ -206,6 +206,7 @@ export function buildApplicationMenu(): void {
         { ...actionMeta('zoomOut'), click: dispatch('zoomOut') },
         { ...actionMeta('zoomReset'), click: dispatch('zoomReset') },
         { ...actionMeta('zoomToFit'), click: dispatch('zoomToFit') },
+        { ...actionMeta('togglePanelFullscreen'), click: dispatch('togglePanelFullscreen') },
         { type: 'separator' },
         { role: 'togglefullscreen' },
         { type: 'separator' },
@@ -217,8 +218,8 @@ export function buildApplicationMenu(): void {
     {
       label: 'Go',
       submenu: [
-        { ...actionMeta('focusNext'), label: 'Next Panel', click: dispatch('focusNext') },
-        { ...actionMeta('focusPrevious'), label: 'Previous Panel', click: dispatch('focusPrevious') },
+        { ...actionMeta('focusNext'), click: dispatch('focusNext') },
+        { ...actionMeta('focusPrevious'), click: dispatch('focusPrevious') },
         { type: 'separator' },
         { ...actionMeta('previousWorkspace'), click: dispatch('previousWorkspace') },
         { ...actionMeta('nextWorkspace'), click: dispatch('nextWorkspace') },
