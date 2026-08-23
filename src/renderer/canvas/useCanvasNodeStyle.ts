@@ -6,7 +6,8 @@
 // =============================================================================
 
 import React, { useMemo } from 'react'
-import type { CanvasNodeState, NodeActivityState } from '../../shared/types'
+import type { CanvasNodeState, NodeActivityState, Size } from '../../shared/types'
+import { FULLSCREEN_INSET } from '../lib/canvas/panelSwitcher'
 
 // Panel corner radius. Set to the tab pill radius (10px) plus the tab bar's 2px
 // inset so the active pill's rounded corner nests concentrically inside the
@@ -60,6 +61,11 @@ interface StyleArgs {
   worktreeHighlight?: boolean
   /** The focus lens is locked on a DIFFERENT worktree → push this node back. */
   worktreeDim?: boolean
+  /** This node is the overlay-fullscreen target. */
+  isFullscreen?: boolean
+  /** Another node is overlay-fullscreen — hide this one in place. */
+  coverHidden?: boolean
+  containerSize?: Size
 }
 
 export function useCanvasNodeStyle(args: StyleArgs) {
@@ -75,6 +81,9 @@ export function useCanvasNodeStyle(args: StyleArgs) {
     worktreeColor,
     worktreeHighlight,
     worktreeDim,
+    isFullscreen,
+    coverHidden,
+    containerSize,
   } = args
 
   const containerStyle = useMemo<React.CSSProperties>(() => {
@@ -94,13 +103,16 @@ export function useCanvasNodeStyle(args: StyleArgs) {
     // Focus lens: nodes outside the focused worktree recede.
     const opacity = worktreeDim ? baseOpacity * 0.5 : baseOpacity
 
+    const fullscreenReady = !!(isFullscreen && containerSize && containerSize.width > 0 && containerSize.height > 0)
+
     return {
       position: 'absolute',
-      left: node.origin.x,
-      top: node.origin.y,
-      width: node.size.width,
-      height: node.size.height,
-      zIndex: 1000 + node.zOrder,
+      left: fullscreenReady ? FULLSCREEN_INSET : node.origin.x,
+      top: fullscreenReady ? FULLSCREEN_INSET : node.origin.y,
+      width: fullscreenReady ? containerSize!.width - FULLSCREEN_INSET * 2 : node.size.width,
+      height: fullscreenReady ? containerSize!.height - FULLSCREEN_INSET * 2 : node.size.height,
+      zIndex: fullscreenReady ? 100001 : 1000 + node.zOrder,
+      visibility: coverHidden ? 'hidden' : undefined,
       borderRadius: CORNER_RADIUS,
       overflow: 'hidden',
       border: `var(--hairline) solid var(--border-subtle)`,
@@ -118,13 +130,14 @@ export function useCanvasNodeStyle(args: StyleArgs) {
       filter: worktreeDim ? 'saturate(0.4)' : undefined,
       transform: isEntering ? 'scale(0.85)' : isExiting ? 'scale(0.9)' : 'scale(1)',
       opacity,
-      pointerEvents: isExiting || isWholeNodeDragSource ? 'none' : undefined,
+      pointerEvents: isExiting || isWholeNodeDragSource || coverHidden ? 'none' : undefined,
       userSelect: 'none',
     }
-  }, [node, isFocused, isSelected, activityState, isAnimatingLayout, isHovered, chromeTint, isWholeNodeDragSource, worktreeDim])
+  }, [node, isFocused, isSelected, activityState, isAnimatingLayout, isHovered, chromeTint, isWholeNodeDragSource, worktreeDim, isFullscreen, coverHidden, containerSize])
 
   const glowStyle = useMemo<React.CSSProperties | null>(() => {
     if (!node) return null
+    if (isFullscreen || coverHidden) return null
     if (!(isFocused || isSelected || worktreeHighlight)) return null
     // Hide the focus glow while the node is the drag source — the source node
     // itself is hidden (containerStyle.opacity = 0 above) and the glow would
@@ -161,7 +174,7 @@ export function useCanvasNodeStyle(args: StyleArgs) {
       opacity: isEntering || isExiting ? 0 : 1,
       transition: `${layoutTransition}transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 150ms ease-out, box-shadow 200ms ease`,
     }
-  }, [node, isFocused, isSelected, isAnimatingLayout, isWholeNodeDragSource, worktreeHighlight, worktreeColor])
+  }, [node, isFocused, isSelected, isAnimatingLayout, isWholeNodeDragSource, worktreeHighlight, worktreeColor, isFullscreen, coverHidden])
 
   return { containerStyle, glowStyle }
 }

@@ -259,6 +259,7 @@ export function useCanvasInteraction(
       // commonly fire alongside a mouse drag and would otherwise zoom/pan the
       // canvas mid-drag, causing the ghost to misalign and the drop to land
       // far from the cursor.
+      if (canvasStoreApi.getState().fullscreenNodeId) return
       if (useDragStore.getState().isDragging) {
         e.preventDefault()
         return
@@ -447,6 +448,7 @@ export function useCanvasInteraction(
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (canvasStoreApi.getState().fullscreenNodeId) return
       if (e.button === 2 || e.button === 1) {
         startPanDrag(e.button, e.clientX, e.clientY)
         // Only track right-click for context menu

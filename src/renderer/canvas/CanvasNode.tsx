@@ -10,7 +10,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRenderCount } from '../lib/perf/perfClient'
 import type { StoreApi } from 'zustand'
 import type { NodeActivityState, DockTabStack as DockTabStackNode, PanelType } from '../../shared/types'
-import { isMaximized as checkMaximized } from '../../shared/types'
 import { useCanvasStoreContext, useCanvasStoreApi } from '../stores/CanvasStoreContext'
 import { useAppStore, useSelectedWorkspace } from '../stores/appStore'
 import { useUIStore } from '../stores/uiStore'
@@ -160,7 +159,6 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   const canvasApi = useCanvasStoreApi()
   const nodeRef = useRef<HTMLDivElement>(null)
   const [isHovered, setIsHovered] = useState(false)
-  const [isAnimatingLayout, setIsAnimatingLayout] = useState(false)
   // True while a file/panel drag is hovering an unfocused node, so the dim
   // overlay lets the drop fall through to the panel content that owns it.
   const [fileDragOver, setFileDragOver] = useState(false)
@@ -184,7 +182,9 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
   )
   const focusNode = useCanvasStoreContext((s) => s.focusNode)
   const removeNode = useCanvasStoreContext((s) => s.removeNode)
-  const toggleMaximize = useCanvasStoreContext((s) => s.toggleMaximize)
+  const toggleFullscreen = useCanvasStoreContext((s) => s.toggleFullscreen)
+  const fullscreenNodeId = useCanvasStoreContext((s) => s.fullscreenNodeId)
+  const containerSize = useCanvasStoreContext((s) => s.containerSize)
   const isSelected = useCanvasStoreContext((s) => isNodeSelected(s, nodeId))
   const isDockDragging = useDragStore((s) => s.isDragging)
   const { hidden: isWholeNodeDragSource } = useDragSourceVisibility(nodeId)
@@ -221,7 +221,8 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     handleDragStart(e)
   }, [handleDragStart, handleTabDetachStart, dockStoreApi, canvasApi, nodeId])
 
-  const maximized = node ? checkMaximized(node) : false
+  const isFullscreen = fullscreenNodeId === nodeId
+  const coverHidden = fullscreenNodeId != null && fullscreenNodeId !== nodeId
 
   const { handleResizeStart } = useNodeResize(nodeId, primaryPanelType, canvasApi)
   // Under the Hand tool, edge presses pan instead of resizing.
@@ -338,30 +339,27 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     removeNode(nodeId)
   }, [removeNode, nodeId, layout, confirmCloseForPanels, wsId])
 
-  const handleToggleMaximize = useCallback(() => {
-    setIsAnimatingLayout(true)
-    const viewportSize = { width: window.innerWidth, height: window.innerHeight }
-    toggleMaximize(nodeId, viewportSize)
-    setTimeout(() => setIsAnimatingLayout(false), 300)
-  }, [toggleMaximize, nodeId])
+  const handleToggleFullscreen = useCallback(() => {
+    toggleFullscreen(nodeId)
+  }, [toggleFullscreen, nodeId])
 
-  // Spring-load: when ANY dock drag is active AND this node is maximized
-  // (covering the canvas), un-maximize after a short delay so the user can
-  // see the canvas underneath and target a drop point.
-  const toggleMaximizeRef = useRef(handleToggleMaximize)
-  toggleMaximizeRef.current = handleToggleMaximize
-  const maximizedRef = useRef(maximized)
-  maximizedRef.current = maximized
+  // Spring-load: when ANY dock drag is active AND this node is fullscreen
+  // (covering the canvas), exit after a short delay so the user can see
+  // the canvas underneath and target a drop point.
+  const toggleFullscreenRef = useRef(handleToggleFullscreen)
+  toggleFullscreenRef.current = handleToggleFullscreen
+  const fullscreenRef = useRef(isFullscreen)
+  fullscreenRef.current = isFullscreen
   useEffect(() => {
     let timerId: number | null = null
     const tryArm = () => {
       const s = useDragStore.getState()
       if (!s.isDragging || s.panel?.type === 'canvas') return
-      if (!maximizedRef.current) return
+      if (!fullscreenRef.current) return
       if (timerId !== null) return
       timerId = window.setTimeout(() => {
         timerId = null
-        if (maximizedRef.current) toggleMaximizeRef.current()
+        if (fullscreenRef.current) toggleFullscreenRef.current()
       }, 200)
     }
     const cancel = () => {
@@ -446,10 +444,10 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
           : <LockOpen size={TAB_ICON_SIZE} />}
       </GrabButton>
       <GrabButton
-        title={maximized ? 'Restore' : 'Maximize'}
-        onClick={(e) => { e.stopPropagation(); handleToggleMaximize() }}
+        title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+        onClick={(e) => { e.stopPropagation(); handleToggleFullscreen() }}
       >
-        {maximized
+        {isFullscreen
           ? <ArrowsInSimple size={TAB_ICON_SIZE} />
           : <ArrowsOutSimple size={TAB_ICON_SIZE} />}
       </GrabButton>
@@ -595,12 +593,12 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       if (target.closest('[data-grab-button]')) return
       e.stopPropagation()
       if (e.detail === 2) {
-        handleToggleMaximize()
+        handleToggleFullscreen()
         return
       }
       handleDragStart(e)
     },
-    [handleDragStart, handleToggleMaximize],
+    [handleDragStart, handleToggleFullscreen],
   )
 
   const handleGrabStripContextMenu = useCallback(
@@ -609,7 +607,7 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
       e.stopPropagation()
       if (!window.electronAPI) return
       const id = await window.electronAPI.showContextMenu([
-        { id: 'maximize', label: maximized ? 'Restore' : 'Maximize' },
+        { id: 'maximize', label: isFullscreen ? 'Exit Full Screen' : 'Full Screen' },
         { id: 'pin', label: node?.isPinned ? 'Unlock' : 'Lock' },
         { type: 'separator' },
         { id: 'front', label: 'Move to Front' },
@@ -618,14 +616,14 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
         { id: 'close', label: 'Close', accelerator: 'Cmd+W' },
       ])
       switch (id) {
-        case 'maximize': handleToggleMaximize(); break
+        case 'maximize': handleToggleFullscreen(); break
         case 'pin': handleTogglePin(); break
         case 'front': canvasApi.getState().moveToFront(nodeId); break
         case 'back': canvasApi.getState().moveToBack(nodeId); break
         case 'close': handleClose(); break
       }
     },
-    [maximized, node?.isPinned, handleToggleMaximize, handleTogglePin, handleClose, canvasApi, nodeId],
+    [isFullscreen, node?.isPinned, handleToggleFullscreen, handleTogglePin, handleClose, canvasApi, nodeId],
   )
 
   // --- Computed styles -------------------------------------------------------
@@ -635,13 +633,16 @@ const CanvasNode: React.FC<CanvasNodeProps> = ({
     isFocused,
     isSelected,
     activityState,
-    isAnimatingLayout,
+    isAnimatingLayout: false,
     isHovered,
     chromeTint,
     isWholeNodeDragSource,
     worktreeColor,
     worktreeHighlight,
     worktreeDim,
+    isFullscreen,
+    coverHidden,
+    containerSize,
   })
 
   // A node must carry geometry to render. Reading `node.size`/`node.origin` below

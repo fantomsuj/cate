@@ -83,6 +83,11 @@ export interface CanvasStoreState {
   future: CanvasHistoryEntry[]
   /** Interactive ghost placement in progress (null when idle). */
   pendingPlacement: PendingPlacement | null
+  /** Node currently shown in overlay fullscreen. View-only — does not
+   *  change origin/size, so neighbors stay where they are. */
+  fullscreenNodeId: CanvasNodeId | null
+  /** Highlighted node while the Ctrl+Tab switcher is open. */
+  panelSwitcher: { highlightId: CanvasNodeId } | null
 }
 
 export interface CanvasHistoryEntry {
@@ -115,6 +120,15 @@ export interface CanvasStoreActions {
   focusNode: (id: CanvasNodeId) => void
   unfocus: () => void
   toggleMaximize: (id: CanvasNodeId, viewportSize: Size) => void
+  /** Overlay-fullscreen the given node (or the focused/selected one). Toggles
+   *  off when that node is already fullscreen. Does not rewrite geometry. */
+  toggleFullscreen: (id?: CanvasNodeId) => void
+  enterFullscreen: (id: CanvasNodeId) => void
+  exitFullscreen: () => void
+  openPanelSwitcher: (direction: 'next' | 'previous') => void
+  cyclePanelSwitcher: (direction: 'next' | 'previous') => void
+  commitPanelSwitcher: () => void
+  cancelPanelSwitcher: () => void
   setZoom: (level: number) => void
   setViewportOffset: (offset: Point) => void
   setZoomAndOffset: (zoom: number, offset: Point) => void

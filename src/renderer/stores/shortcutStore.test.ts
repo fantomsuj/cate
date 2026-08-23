@@ -23,6 +23,12 @@ describe('shortcutStore', () => {
     vi.resetModules()
   })
 
+  it('togglePanelFullscreen defaults to Cmd+F', async () => {
+    const { matchShortcutEvent } = await loadStores()
+    expect(matchShortcutEvent(keyEvent('f', { meta: true }))).toBe('togglePanelFullscreen')
+    expect(matchShortcutEvent(keyEvent('f', { meta: true, shift: true }))).toBe('toggleSearch')
+  })
+
   it('toggleTool defaults to Ctrl+Space, not Shift+Space (#371)', async () => {
     const { matchShortcutEvent } = await loadStores()
     expect(matchShortcutEvent(keyEvent(' ', { shift: true }))).toBeNull()

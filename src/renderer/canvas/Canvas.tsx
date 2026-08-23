@@ -16,6 +16,7 @@ import CanvasGrid from './CanvasGrid'
 import CanvasBackgroundImage from './CanvasBackgroundImage'
 import SnapGuides from './SnapGuides'
 import GhostPlacementLayer from './GhostPlacementLayer'
+import PanelSwitcher from './PanelSwitcher'
 import PlacementVizOverlay from './placementViz/PlacementVizOverlay'
 import { WorktreeTerritoryLayer } from './worktree'
 import type { Point, PanelType } from '../../shared/types'
@@ -177,6 +178,7 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
   const handToolActive = useUIStore((s) => s.activeTool === 'hand')
   const idleCursor = handToolActive ? 'grab' : 'default'
   const showWorktreeTerritory = useSettingsStore((s) => s.showWorktreeTerritory)
+  const fullscreenNodeId = useCanvasStoreContext((s) => s.fullscreenNodeId)
 
   // While the Hand tool is active, neutralize interactive panel content so a
   // left-press anywhere pans the canvas (see the .canvas-tool-hand CSS rules).
@@ -202,9 +204,17 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
   // Imperatively update the world div transform on zoom/offset changes so
   // Canvas itself never re-renders during pan/zoom — only the world div moves.
   useEffect(() => {
-    const applyTransform = (zoom: number, offset: { x: number; y: number }) => {
+    const applyTransform = (zoom: number, offset: { x: number; y: number }, fullscreen: boolean) => {
       const el = worldRef.current
       if (!el) return
+      // Overlay fullscreen parks the world at identity so the focused node can
+      // fill the canvas in CSS pixels without rewriting its stored geometry.
+      if (fullscreen) {
+        el.style.transform = 'none'
+        el.style.setProperty('--zoom', '1')
+        el.style.willChange = 'auto'
+        return
+      }
       el.style.transform = `scale(${zoom}) translate(${offset.x / zoom}px, ${offset.y / zoom}px)`
       el.style.setProperty('--zoom', String(zoom))
 
@@ -223,13 +233,17 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
     }
 
     // Apply current state immediately on mount
-    const { zoomLevel, viewportOffset } = canvasApi.getState()
-    applyTransform(zoomLevel, viewportOffset)
+    const { zoomLevel, viewportOffset, fullscreenNodeId } = canvasApi.getState()
+    applyTransform(zoomLevel, viewportOffset, fullscreenNodeId != null)
 
     // Subscribe to future changes
     const unsubscribe = canvasApi.subscribe((state, prev) => {
-      if (state.zoomLevel !== prev.zoomLevel || state.viewportOffset !== prev.viewportOffset) {
-        applyTransform(state.zoomLevel, state.viewportOffset)
+      if (
+        state.zoomLevel !== prev.zoomLevel ||
+        state.viewportOffset !== prev.viewportOffset ||
+        state.fullscreenNodeId !== prev.fullscreenNodeId
+      ) {
+        applyTransform(state.zoomLevel, state.viewportOffset, state.fullscreenNodeId != null)
       }
     })
     return () => {
@@ -590,6 +604,7 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
       ref={canvasRef}
       data-canvas-container
       data-canvas-panel-id={panelId}
+      data-panel-fullscreen={fullscreenNodeId ? 'true' : 'false'}
       data-filedrop="canvas"
       data-filedrop-id={panelId}
       // overflow-clip, not overflow-hidden: the canvas pans via the world
@@ -646,6 +661,24 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
         onClick={handleWorldClick}
       >
         <SnapGuides />
+        {fullscreenNodeId && (
+          <div
+            data-panel-fullscreen-backdrop
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              canvasApi.getState().exitFullscreen()
+            }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: containerSize.width,
+              height: containerSize.height,
+              background: 'color-mix(in srgb, var(--surface-0) 52%, transparent)',
+              zIndex: 99990,
+            }}
+          />
+        )}
         {marqueeRect && (
           <div
             style={{
@@ -667,6 +700,7 @@ const Canvas: React.FC<CanvasProps> = ({ children, onCreateAtPoint, panelId }) =
         {(import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV && <PlacementVizOverlay />}
       </div>
 
+      <PanelSwitcher />
       <PlacementHint canvasRef={canvasRef} />
     </div>
   )
