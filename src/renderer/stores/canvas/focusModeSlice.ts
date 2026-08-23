@@ -3,7 +3,7 @@
 // These are view-only: they do not move or resize node geometry.
 // =============================================================================
 
-import type { CanvasNodeId } from '../../../shared/types'
+import type { CanvasNodeId, Point } from '../../../shared/types'
 import { cycleSwitcherId, type SwitcherDirection } from '../../lib/canvas/panelSwitcher'
 import type { CanvasGet, CanvasSet, CanvasStoreActions } from './storeTypes'
 import { focusedNodeId } from './selectionModel'
@@ -28,6 +28,29 @@ function resolveFullscreenTarget(get: CanvasGet, id?: CanvasNodeId): CanvasNodeI
   const target = id ?? focusedNodeId(state) ?? (state.selection.length === 1 ? state.selection[0] : null)
   if (!target || !state.nodes[target]) return null
   return target
+}
+
+/** Viewport offset that places `nodeId`'s center in the middle of the canvas. */
+function offsetToCenterNode(get: CanvasGet, nodeId: CanvasNodeId): Point | null {
+  const state = get()
+  const node = state.nodes[nodeId]
+  const cs = state.containerSize
+  if (!node || cs.width <= 0 || cs.height <= 0) return null
+  const zoom = state.zoomLevel
+  return {
+    x: cs.width / 2 - (node.origin.x + node.size.width / 2) * zoom,
+    y: cs.height / 2 - (node.origin.y + node.size.height / 2) * zoom,
+  }
+}
+
+/** Pan the camera onto a switcher target. Overlay fullscreen already fills the
+ *  canvas, so it does not move the stored viewport. */
+function revealSwitcherNode(set: CanvasSet, get: CanvasGet, nodeId: CanvasNodeId): void {
+  if (get().fullscreenNodeId) return
+  const target = offsetToCenterNode(get, nodeId)
+  if (!target) return
+  if (!get().suppressAutoFocus) set({ suppressAutoFocus: true })
+  get().animateViewportTo(target)
 }
 
 export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeActions {
@@ -57,12 +80,21 @@ export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeA
       const ids = nodeIdsInOrder(get)
       if (ids.length === 0) return
       if (ids.length === 1) {
-        get().focusNode(ids[0])
+        if (get().fullscreenNodeId) get().focusNode(ids[0])
+        else get().focusAndCenter(ids[0])
         return
       }
       const from = get().panelSwitcher?.highlightId ?? focusedNodeId(get())
       const next = cycleSwitcherId(ids, from, direction)
-      if (next) set({ panelSwitcher: { highlightId: next } })
+      if (!next) return
+      const existing = get().panelSwitcher
+      set({
+        panelSwitcher: {
+          highlightId: next,
+          prevOffset: existing?.prevOffset ?? { ...get().viewportOffset },
+        },
+      })
+      revealSwitcherNode(set, get, next)
     },
 
     cyclePanelSwitcher(direction: SwitcherDirection) {
@@ -71,7 +103,9 @@ export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeA
         return
       }
       const next = cycleSwitcherId(nodeIdsInOrder(get), get().panelSwitcher!.highlightId, direction)
-      if (next) set({ panelSwitcher: { highlightId: next } })
+      if (!next) return
+      set({ panelSwitcher: { ...get().panelSwitcher!, highlightId: next } })
+      revealSwitcherNode(set, get, next)
     },
 
     commitPanelSwitcher() {
@@ -82,12 +116,19 @@ export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeA
       }
       const stayFullscreen = get().fullscreenNodeId != null
       set({ panelSwitcher: null })
-      get().focusNode(highlight)
-      if (stayFullscreen) set({ fullscreenNodeId: highlight })
+      if (stayFullscreen) {
+        get().focusNode(highlight)
+        set({ fullscreenNodeId: highlight })
+      } else {
+        get().focusAndCenter(highlight)
+      }
     },
 
     cancelPanelSwitcher() {
-      if (get().panelSwitcher) set({ panelSwitcher: null })
+      const prev = get().panelSwitcher?.prevOffset
+      if (!get().panelSwitcher) return
+      set({ panelSwitcher: null })
+      if (prev && !get().fullscreenNodeId) get().setViewportOffset(prev)
     },
   }
 }

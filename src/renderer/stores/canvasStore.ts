@@ -306,7 +306,7 @@ export { keepAliveNodeIds as __keepAliveNodeIdsForTest }
 export function selectVisibleNodeIds(
   s: Pick<
     CanvasStore,
-    'nodes' | 'viewportOffset' | 'zoomLevel' | 'containerSize' | 'selection' | 'selectionActive' | 'fullscreenNodeId'
+    'nodes' | 'viewportOffset' | 'zoomLevel' | 'containerSize' | 'selection' | 'selectionActive' | 'fullscreenNodeId' | 'panelSwitcher'
   >,
   keepMountedPanelIds?: ReadonlySet<string>,
 ): string[] {
@@ -314,6 +314,7 @@ export function selectVisibleNodeIds(
   const { nodes, viewportOffset, zoomLevel, containerSize } = s
   const focusedNodeId = focusedNodeIdOf(s)
   const fullscreenNodeId = s.fullscreenNodeId
+  const switcherId = s.panelSwitcher?.highlightId
   const z = zoomLevel
   const cw = containerSize.width
   const ch = containerSize.height
@@ -340,7 +341,7 @@ export function selectVisibleNodeIds(
 
   const result: string[] = []
   for (const n of sorted) {
-    if (n.id === focusedNodeId || n.id === fullscreenNodeId || n.isPinned || keepAlive.has(n.id)) {
+    if (n.id === focusedNodeId || n.id === fullscreenNodeId || n.id === switcherId || n.isPinned || keepAlive.has(n.id)) {
       result.push(n.id)
       continue
     }

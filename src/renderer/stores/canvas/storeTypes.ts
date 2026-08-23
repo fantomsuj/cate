@@ -86,8 +86,9 @@ export interface CanvasStoreState {
   /** Node currently shown in overlay fullscreen. View-only — does not
    *  change origin/size, so neighbors stay where they are. */
   fullscreenNodeId: CanvasNodeId | null
-  /** Highlighted node while the Ctrl+Tab switcher is open. */
-  panelSwitcher: { highlightId: CanvasNodeId } | null
+  /** Highlighted node while the Ctrl+Tab switcher is open. `prevOffset` is
+   *  the viewport from before the first cycle, restored on cancel. */
+  panelSwitcher: { highlightId: CanvasNodeId; prevOffset: { x: number; y: number } } | null
 }
 
 export interface CanvasHistoryEntry {

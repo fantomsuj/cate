@@ -52,28 +52,56 @@ describe('overlay fullscreen', () => {
 })
 
 describe('panel switcher', () => {
-  it('opens on the next node and commits focus', () => {
+  it('opens on the next node, pans the camera to it, and commits focus', () => {
     const { store, a, b } = addThree()
+    store.getState().setContainerSize({ width: 1200, height: 800 })
+    store.getState().setZoomAndOffset(1, { x: 0, y: 0 })
     store.getState().focusNode(a)
 
     store.getState().openPanelSwitcher('next')
-    expect(store.getState().panelSwitcher).toEqual({ highlightId: b })
+    expect(store.getState().panelSwitcher?.highlightId).toBe(b)
     expect(focusedNodeId(store.getState())).toBe(a)
+    // Node b center (250, 40) maps to the container center (600, 400).
+    expect(store.getState().viewportOffset).toEqual({ x: 350, y: 360 })
 
     store.getState().commitPanelSwitcher()
     expect(store.getState().panelSwitcher).toBeNull()
     expect(focusedNodeId(store.getState())).toBe(b)
+    expect(store.getState().viewportOffset).toEqual({ x: 350, y: 360 })
+  })
+
+  it('follows each highlighted panel and restores the camera on cancel', () => {
+    const { store, a, c } = addThree()
+    store.getState().setContainerSize({ width: 1200, height: 800 })
+    store.getState().setZoomAndOffset(1, { x: 10, y: 20 })
+    store.getState().focusNode(a)
+
+    store.getState().openPanelSwitcher('next')
+    expect(store.getState().viewportOffset).toEqual({ x: 350, y: 360 })
+    store.getState().cyclePanelSwitcher('next')
+    expect(store.getState().panelSwitcher?.highlightId).toBe(c)
+    // Node c center (450, 40).
+    expect(store.getState().viewportOffset).toEqual({ x: 150, y: 360 })
+
+    store.getState().cancelPanelSwitcher()
+    expect(store.getState().panelSwitcher).toBeNull()
+    expect(store.getState().viewportOffset).toEqual({ x: 10, y: 20 })
+    expect(focusedNodeId(store.getState())).toBe(a)
   })
 
   it('keeps overlay fullscreen when committing a different panel', () => {
     const { store, a, c } = addThree()
+    store.getState().setContainerSize({ width: 1200, height: 800 })
+    store.getState().setZoomAndOffset(1, { x: 10, y: 20 })
     store.getState().enterFullscreen(a)
     store.getState().openPanelSwitcher('previous')
     expect(store.getState().panelSwitcher?.highlightId).toBe(c)
+    expect(store.getState().viewportOffset).toEqual({ x: 10, y: 20 })
 
     store.getState().commitPanelSwitcher()
     expect(store.getState().fullscreenNodeId).toBe(c)
     expect(focusedNodeId(store.getState())).toBe(c)
+    expect(store.getState().viewportOffset).toEqual({ x: 10, y: 20 })
   })
 
   it('cancel leaves focus and fullscreen alone', () => {

@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - **Panel full screen**: focus a canvas panel in an overlay that fills the canvas without resizing it over its neighbors. Toggle with ⌘F (or the panel Full Screen control); Esc exits. Find in a text editor still uses ⌘F.
-- **Panel switcher**: hold ⌃Tab to pick another canvas panel from a macOS-style strip, then release to focus it. Works while a panel is full screen.
+- **Panel switcher**: hold ⌃Tab to pick another canvas panel from a macOS-style strip, then release to focus it. The canvas camera follows each highlighted panel so it is on screen when you land. Works while a panel is full screen.
 
 ### Changed
 
