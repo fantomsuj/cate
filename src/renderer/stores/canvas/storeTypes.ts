@@ -149,7 +149,7 @@ export interface CanvasStoreActions {
   previousNode: () => CanvasNodeId | null
 
   // Focus and center viewport on a node
-  focusAndCenter: (nodeId: CanvasNodeId) => void
+  focusAndCenter: (nodeId: CanvasNodeId, opts?: { animate?: boolean }) => void
 
   // Interactive ghost placement
   /** Record the latest canvas-space pointer position so recommendations can be
