@@ -307,7 +307,7 @@ export function createNodesSlice(set: CanvasSet, get: CanvasGet): NodesActions {
       })
     },
 
-    focusAndCenter(nodeId) {
+    focusAndCenter(nodeId, opts) {
       const state = get()
       const node = state.nodes[nodeId]
       if (!node) return
@@ -321,13 +321,13 @@ export function createNodesSlice(set: CanvasSet, get: CanvasGet): NodesActions {
         selectionActive: true,
         focusEpoch: state.focusEpoch + 1,
       }
-      if (cs.width > 0 && cs.height > 0) {
-        newState.viewportOffset = {
-          x: cs.width / 2 - (node.origin.x + node.size.width / 2) * zoom,
-          y: cs.height / 2 - (node.origin.y + node.size.height / 2) * zoom,
-        }
-      }
+      const target = cs.width > 0 && cs.height > 0 ? {
+        x: cs.width / 2 - (node.origin.x + node.size.width / 2) * zoom,
+        y: cs.height / 2 - (node.origin.y + node.size.height / 2) * zoom,
+      } : null
+      if (target && !opts?.animate) newState.viewportOffset = target
       set(newState)
+      if (target && opts?.animate) get().animateViewportTo(target)
     },
 
     togglePin(id) {

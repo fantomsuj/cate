@@ -120,7 +120,7 @@ export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeA
         get().focusNode(highlight)
         set({ fullscreenNodeId: highlight })
       } else {
-        get().focusAndCenter(highlight)
+        get().focusAndCenter(highlight, { animate: true })
       }
     },
 
@@ -128,7 +128,10 @@ export function createFocusModeSlice(set: CanvasSet, get: CanvasGet): FocusModeA
       const prev = get().panelSwitcher?.prevOffset
       if (!get().panelSwitcher) return
       set({ panelSwitcher: null })
-      if (prev && !get().fullscreenNodeId) get().setViewportOffset(prev)
+      if (prev && !get().fullscreenNodeId) {
+        set({ suppressAutoFocus: false })
+        get().animateViewportTo(prev)
+      }
     },
   }
 }

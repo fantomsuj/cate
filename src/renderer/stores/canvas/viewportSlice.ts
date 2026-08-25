@@ -9,7 +9,7 @@ import { viewToCanvas as viewToCanvasCoords } from '../../lib/canvas/coordinates
 import type { CanvasGet, CanvasSet, CanvasStoreActions } from './storeTypes'
 import type { CanvasStoreCtx } from './storeCtx'
 import { focusedNodeId } from './selectionModel'
-import { zoomEaseForElapsed } from '../../lib/canvas/zoomAnimation'
+import { easeForElapsed, zoomEaseForElapsed } from '../../lib/canvas/zoomAnimation'
 
 type ViewportActions = Pick<
   CanvasStoreActions,
@@ -143,8 +143,9 @@ export function createViewportSlice(set: CanvasSet, get: CanvasGet, ctx: CanvasS
       // A loop is already running — it will glide to the updated target.
       if (ctx.activeOffsetAnimationRafId) return
 
-      const EASE = 0.18
-      const tick = () => {
+      const EASE_PER_60HZ_FRAME = 0.18
+      let lastFrameAt = performance.now()
+      const tick = (now: number) => {
         const t = ctx.offsetAnimTarget
         if (!t) { ctx.activeOffsetAnimationRafId = 0; return }
         const { viewportOffset: o } = get()
@@ -156,7 +157,9 @@ export function createViewportSlice(set: CanvasSet, get: CanvasGet, ctx: CanvasS
           ctx.offsetAnimTarget = null
           return
         }
-        set({ viewportOffset: { x: o.x + dx * EASE, y: o.y + dy * EASE } })
+        const ease = easeForElapsed(now - lastFrameAt, EASE_PER_60HZ_FRAME)
+        lastFrameAt = now
+        set({ viewportOffset: { x: o.x + dx * ease, y: o.y + dy * ease } })
         ctx.activeOffsetAnimationRafId = requestAnimationFrame(tick)
       }
       ctx.activeOffsetAnimationRafId = requestAnimationFrame(tick)

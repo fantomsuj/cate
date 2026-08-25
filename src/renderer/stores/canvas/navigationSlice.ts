@@ -34,7 +34,7 @@ export function createNavigationSlice(set: CanvasSet, get: CanvasGet, ctx: Canva
       }
 
       const best = findNodeInDirection(nodeList, refX, refY, dir, current?.id)
-      if (best) get().focusAndCenter(best.id)
+      if (best) get().focusAndCenter(best.id, { animate: true })
     },
 
     navigateSelect(dir) {
